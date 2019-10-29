@@ -9,4 +9,20 @@
 /home/mario/CLionProjects/QRServer/main.cpp
 iostream
 -
+stdio.h
+-
+unistd.h
+-
+cstdlib
+-
+getopt.h
+-
+string.h
+-
+sys/types.h
+-
+sys/socket.h
+-
+netinet/in.h
+-
 
