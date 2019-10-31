@@ -4,7 +4,10 @@
 #include <cstdlib>
 #include <getopt.h>
 #include <string.h>
+#include <fstream>
 
+
+#include <stdexcept>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -13,11 +16,14 @@
 #define required_argument 1
 #define optional_argument 2
 
+char* getURL(std::string imageName);
+
 int main(int argc, char *argv[]) {
+
     std::cout << "Hello, World!" << std::endl;
     int opt;
     int index;
-    char buffer[1024] = {0};
+    int buffer;
     char *hello = "Hello from server yeet";
 
 
@@ -98,11 +104,66 @@ int main(int argc, char *argv[]) {
         std::cout << "Error accepting";
     }
 
-    int value = read(new_socket, buffer, 1024);
+    int value = read(new_socket, &buffer, sizeof(int));
 
-    printf("%s\n",buffer);
-    send(new_socket, hello,strlen(hello),0);
-    printf("Hello Message sent\n");
+    std::cout << "\nRecieved size: " << buffer;
+
+
+
+//    int value2 = read(new_socket, &buffer, sizeof(int));
+//    std::cout << "\nTest read: " << buffer;
+
+
+
+    char * recImgBuffer = (char *) malloc(buffer);
+
+    int value2 = read(new_socket, recImgBuffer, buffer);
+
+    FILE * recievedFile;
+    recievedFile = fopen("googleRec.png","w");
+    fwrite(recImgBuffer, buffer,1,recievedFile);
+    fclose(recievedFile);
+
+//    std::ofstream image;
+//    image.open("googleRec.png");
+//    image << recImgBuffer;
+//    image.close();
+
+//    printf("%s\n",buffer);
+//    send(new_socket, hello,strlen(hello),0);
+//    printf("Hello Message sent\n");
+
+    std::string URL = getURL("googleRec.png");
+
+    send(new_socket, URL.c_str(), strlen(URL.c_str()), 0);
+
+    close(new_socket);
+
+
+
+
+
+
 
     return 0;
+}
+
+char* getURL(std::string imageName){
+
+    std::string blankCmd = "java -cp javase.jar:core.jar com.google.zxing.client.j2se.CommandLineRunner " + imageName;
+    char * cmd = (char *) blankCmd.c_str();
+
+    FILE* pipe = popen(cmd, "r");
+    char urlBuffer[10000];
+    int count = 0;
+    while(fgets(urlBuffer, 10000, pipe)){
+
+        if(count == 4){
+            //std::cout << std::endl << urlBuffer;
+            break;
+        }
+        count++;
+    }
+
+    return urlBuffer;
 }
