@@ -7,6 +7,7 @@
 #include <fstream>
 
 
+
 #include <stdexcept>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -24,7 +25,7 @@ int main(int argc, char *argv[]) {
 
     int opt;
     int index;
-    int buffer;
+
 
 
 
@@ -38,8 +39,7 @@ int main(int argc, char *argv[]) {
     int time_out = 80; //Seconds
 
 
-    struct sockaddr_in address;
-    int addrlen = sizeof(address);
+
 
 
 
@@ -99,49 +99,63 @@ int main(int argc, char *argv[]) {
 
     }
 
-
+    //Creates and sets address struct
+    struct sockaddr_in address;
+    int addrlen = sizeof(address);
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY; //Sets Address to  localhost
     address.sin_port = htons(port);
 
+
+    //Binds Socket
     if(bind(socketDesc, (struct sockaddr *)&address, sizeof(address)) < 0){
         std::cout << "\nUnable to bind";
     }
 
+    //Listens on socket
     if(listen(socketDesc, 3) < 0){
         std::cout << "\nFailed to listen";
     }
 
 
-
+    //Accepts new connection as new_socket
     if((new_socket = accept(socketDesc, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0){
         std::cout << "Error accepting";
     }
 
-    int value = read(new_socket, &buffer, sizeof(int));
 
+    //reads in size of QR Code,
+    int buffer;
+    int BR_QRImageSize = read(new_socket, &buffer, sizeof(int));
     std::cout << "\nRecieved size: " << buffer;
     if(buffer >= 20000){
         std::cout << "Client sent file too large. ";
     }
 
-
+    //Creates buffer of needed size for QR Code Image
     char * recImgBuffer = (char *) malloc(buffer);
 
-    int value2 = read(new_socket, recImgBuffer, buffer);
 
+    //Reads in and stores QR code image named based on socket FD
+    int BR_QRImage = read(new_socket, recImgBuffer, buffer);
     FILE * recievedFile;
-    recievedFile = fopen("googleRec.png","w");
+    std::string fileName = "imageFromClient" + to_string(new_socket);
+    recievedFile = fopen(fileName.c_str(),"w");
     fwrite(recImgBuffer, buffer,1,recievedFile);
     fclose(recievedFile);
 
 
-    std::string URL = getURL("googleRec.png");
 
+    //Gets URL from QR Code
+    std::string URL = getURL(fileName.c_str());
+
+
+    //Gets size of URL and sends it.
     int size =  strlen(URL.c_str());
     send(new_socket, &size, sizeof(int), 0);
     std::cout << "\nSent Size of URL: " << strlen(URL.c_str());
 
+    //Sends URL to client
     send(new_socket, URL.c_str(), strlen(URL.c_str()), 0);
     std::cout << "\nSent URL: " << URL;
 
