@@ -5,7 +5,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <fstream>
-
+#include <cstdint>
 
 
 #include <stdexcept>
@@ -125,16 +125,17 @@ int main(int argc, char *argv[]) {
 
 
     //reads in size of QR Code,
-    int buffer;
-    int BR_QRImageSize = read(new_socket, &buffer, sizeof(int));
+    std::uint32_t buffer;
+    int BR_QRImageSize = read(new_socket, &buffer, sizeof(std::uint32_t));
     std::cout << "\nRecieved size: " << buffer;
     if(buffer >= 20000){
         std::cout << "Client sent file too large. ";
     }
 
+
+
     //Creates buffer of needed size for QR Code Image
     char * recImgBuffer = (char *) malloc(buffer);
-
 
     //Reads in and stores QR code image named based on socket FD
     int BR_QRImage = read(new_socket, recImgBuffer, buffer);
@@ -150,15 +151,32 @@ int main(int argc, char *argv[]) {
     std::string URL = getURL(fileName.c_str());
 
 
+    std::uint32_t returnCode = 0;
+    if(URL == "-1"){
+        std::cout << "\ngetURL returned invalid QRCode";
+        returnCode = 1;
+        URL = "";
+        int BS_returnCode = send(new_socket, &returnCode, sizeof(std::uint32_t), 0);
+        //CONTINUE
+
+    }
+
+
+
+    int BS_returnCode = send(new_socket, &returnCode, sizeof(std::uint32_t), 0);
+    std::cout << "\nSent return code: " << returnCode;
+
     //Gets size of URL and sends it.
-    int size =  strlen(URL.c_str());
-    send(new_socket, &size, sizeof(int), 0);
+    std::uint32_t URLSize=  strlen(URL.c_str());
+    int BS_URLlength = send(new_socket, &URLSize, sizeof(std::uint32_t), 0);
     std::cout << "\nSent Size of URL: " << strlen(URL.c_str());
 
     //Sends URL to client
-    send(new_socket, URL.c_str(), strlen(URL.c_str()), 0);
+    int BS_URL = send(new_socket, URL.c_str(), strlen(URL.c_str()), 0);
     std::cout << "\nSent URL: " << URL;
 
+
+    free(recImgBuffer);
     close(new_socket);
 
 
@@ -176,9 +194,21 @@ std::string getURL(std::string imageName){
     char * cmd = (char *) blankCmd.c_str();
 
     FILE* pipe = popen(cmd, "r");
-    char urlBuffer[10000];
+    char urlBuffer[20000];
     int count = 0;
     while(fgets(urlBuffer, 10000, pipe)){
+
+
+        if(count == 0){
+            std::string bufferString(urlBuffer);
+            std::size_t found = bufferString.find("No barcode found");
+            if(found != -1){
+                std::string notFound = "-1";
+                return notFound;
+            }
+        }
+
+        //std::cout << std::endl << urlBuffer;
 
         if(count == 4){
             //std::cout << std::endl << urlBuffer;
