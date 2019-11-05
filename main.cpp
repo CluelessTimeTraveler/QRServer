@@ -11,25 +11,25 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+using namespace std;
+
 
 #define no_argument 0
 #define required_argument 1
 #define optional_argument 2
 
-char* getURL(std::string imageName);
+std::string getURL(std::string imageName);
 
 int main(int argc, char *argv[]) {
 
-    std::cout << "Hello, World!" << std::endl;
     int opt;
     int index;
     int buffer;
-    char *hello = "Hello from server yeet";
+
 
 
     int socketDesc, new_socket;
 
-    //extern char *optarg;
 
     int port = 2012;
     int rate_msgs = 3; //requests
@@ -41,47 +41,59 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in address;
     int addrlen = sizeof(address);
 
-//    const struct option longopts[] = {
-//            {"PORT", optional_argument, NULL, 'P'},
-//            {"RATE_MSGS", optional_argument, NULL, 'R'},
-//            {"RATE_TIME", optional_argument, NULL, 'T'},
-//            {"MAX_USERS", optional_argument, NULL, 'M'},
-//            {"TIME_OUT", optional_argument, NULL, 'O'},
-//            {0, 0, 0, 0}
-//    };
-//
-//    std::cout << "Yeet2\n";
-//
-//    while(((opt = getopt_long(argc, argv, "PRTMO", longopts, NULL)) != -1)){
-//
-//        std::cout << "Arguement is optarg: " << optarg << std::endl;
-//
-//
-//        switch(opt){
-//            case 'P':
-//                port = atoi(optarg);
-//                break;
-//            case 'R':
-//                rate_msgs = atoi(optarg);
-//                break;
-//            case 'T':
-//                rate_time = atoi(optarg);
-//                break;
-//            case 'M':
-//                max_users = atoi(optarg);
-//                break;
-//            case 'Q':
-//                time_out = atoi(optarg);
-//                break;
-//        }
-//    }
 
-    std::cout << "Entered: \nPort: " << port;
+
+    //Command Line Args
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    const struct option longopts[] = {
+            {"PORT", optional_argument, NULL, 'P'},
+            {"RATE_MSGS", optional_argument, NULL, 'R'},
+            {"RATE_TIME", optional_argument, NULL, 'T'},
+            {"MAX_USERS", optional_argument, NULL, 'M'},
+            {"TIME_OUT", optional_argument, NULL, 'O'},
+            {0, 0, 0, 0}
+    };
+
+
+
+    while(((opt = getopt_long(argc, argv, "PRTMO", longopts, NULL)) != -1)){
+
+        //std::cout << "Arguement is optarg: " << optarg << std::endl;
+
+
+        switch(opt){
+            case 'P':
+                port = atoi(optarg);
+                break;
+            case 'R':
+                rate_msgs = atoi(optarg);
+                break;
+            case 'T':
+                rate_time = atoi(optarg);
+                break;
+            case 'M':
+                max_users = atoi(optarg);
+                break;
+            case 'Q':
+                time_out = atoi(optarg);
+                break;
+            case '?':
+                std::cout << "Error: Unknown argument";
+                return 1;
+        }
+    }
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+    cout << "Server is running on port " << port << " with the following arguments..";
     std::cout << "\nRate_msgs: " << rate_msgs;
     std::cout << "\nRate_time: " << rate_time;
     std::cout << "\nMax_users: " << max_users;
-    std::cout << "\nTime_Out: " << time_out;
+    std::cout << "\nTime_Out: " << time_out << endl ;
 
+
+    //Opens socket
     if((socketDesc = socket(AF_INET, SOCK_STREAM,IPPROTO_TCP)) < 0){
         std::cout << "\nError, unable to create socket";
 
@@ -89,7 +101,7 @@ int main(int argc, char *argv[]) {
 
 
     address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_addr.s_addr = INADDR_ANY; //Sets Address to  localhost
     address.sin_port = htons(port);
 
     if(bind(socketDesc, (struct sockaddr *)&address, sizeof(address)) < 0){
@@ -100,6 +112,8 @@ int main(int argc, char *argv[]) {
         std::cout << "\nFailed to listen";
     }
 
+
+
     if((new_socket = accept(socketDesc, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0){
         std::cout << "Error accepting";
     }
@@ -107,12 +121,9 @@ int main(int argc, char *argv[]) {
     int value = read(new_socket, &buffer, sizeof(int));
 
     std::cout << "\nRecieved size: " << buffer;
-
-
-
-//    int value2 = read(new_socket, &buffer, sizeof(int));
-//    std::cout << "\nTest read: " << buffer;
-
+    if(buffer >= 20000){
+        std::cout << "Client sent file too large. ";
+    }
 
 
     char * recImgBuffer = (char *) malloc(buffer);
@@ -124,18 +135,15 @@ int main(int argc, char *argv[]) {
     fwrite(recImgBuffer, buffer,1,recievedFile);
     fclose(recievedFile);
 
-//    std::ofstream image;
-//    image.open("googleRec.png");
-//    image << recImgBuffer;
-//    image.close();
-
-//    printf("%s\n",buffer);
-//    send(new_socket, hello,strlen(hello),0);
-//    printf("Hello Message sent\n");
 
     std::string URL = getURL("googleRec.png");
 
+    int size =  strlen(URL.c_str());
+    send(new_socket, &size, sizeof(int), 0);
+    std::cout << "\nSent Size of URL: " << strlen(URL.c_str());
+
     send(new_socket, URL.c_str(), strlen(URL.c_str()), 0);
+    std::cout << "\nSent URL: " << URL;
 
     close(new_socket);
 
@@ -148,7 +156,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-char* getURL(std::string imageName){
+std::string getURL(std::string imageName){
 
     std::string blankCmd = "java -cp javase.jar:core.jar com.google.zxing.client.j2se.CommandLineRunner " + imageName;
     char * cmd = (char *) blankCmd.c_str();
@@ -164,6 +172,6 @@ char* getURL(std::string imageName){
         }
         count++;
     }
-
-    return urlBuffer;
+    std::string URL(urlBuffer);
+    return URL;
 }
