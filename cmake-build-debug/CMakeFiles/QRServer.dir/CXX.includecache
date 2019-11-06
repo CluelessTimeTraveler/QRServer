@@ -21,6 +21,12 @@ string.h
 -
 fstream
 -
+cstdint
+-
+thread
+-
+poll.h
+-
 stdexcept
 -
 sys/types.h
@@ -28,5 +34,7 @@ sys/types.h
 sys/socket.h
 -
 netinet/in.h
+-
+pthread.h
 -
 

@@ -1,1 +1,1 @@
-/usr/bin/c++  -g   CMakeFiles/QRServer.dir/main.cpp.o  -o QRServer 
+/usr/bin/c++  -pthread -g   CMakeFiles/QRServer.dir/main.cpp.o  -o QRServer 
